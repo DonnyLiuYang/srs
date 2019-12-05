@@ -179,7 +179,7 @@ echo "" >> ${FILE}; echo "" >> ${FILE}
 #
 echo "# generate the utest binary" >> ${FILE}
 cat << END >> ${FILE}
-${SRS_TRUNK_PREFIX}/${SRS_OBJS_DIR}/${APP_NAME} : \$(SRS_UTEST_DEPS) ${MODULE_OBJS} gtest_main.a
+${SRS_TRUNK_PREFIX}/${SRS_OBJS_DIR}/${APP_NAME} : \$(SRS_UTEST_DEPS) ${MODULE_OBJS} gtest.a
 	\$(CXX) -o \$@ \$(CPPFLAGS) \$(CXXFLAGS) \$^ \$(DEPS_LIBRARIES_FILES) ${LINK_OPTIONS}
 END
 
@@ -187,4 +187,4 @@ END
 # parent Makefile, to create module output dir before compile it.
 echo "	@mkdir -p ${SRS_OBJS_DIR}/utest" >> ${SRS_WORKDIR}/${SRS_MAKEFILE}
 
-echo -n "generate utest ok"; echo '!';
+echo -n "Generate utest ok"; echo '!';

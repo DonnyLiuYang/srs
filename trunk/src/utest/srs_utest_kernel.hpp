@@ -1,7 +1,7 @@
 /*
 The MIT License (MIT)
 
-Copyright (c) 2013-2015 SRS(ossrs)
+Copyright (c) 2013-2019 Winlin
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of
 this software and associated documentation files (the "Software"), to deal in
@@ -31,9 +31,11 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include <string>
 #include <srs_kernel_file.hpp>
-#include <srs_protocol_buffer.hpp>
+#include <srs_kernel_buffer.hpp>
+#include <srs_protocol_stream.hpp>
+#include <srs_kernel_ts.hpp>
 
-class MockBufferReader: public ISrsBufferReader
+class MockBufferReader: public ISrsReader
 {
 private:
     std::string str;
@@ -41,25 +43,33 @@ public:
     MockBufferReader(const char* data);
     virtual ~MockBufferReader();
 public:
-    virtual int read(void* buf, size_t size, ssize_t* nread);
+    virtual srs_error_t read(void* buf, size_t size, ssize_t* nread);
 };
 
 class MockSrsFileWriter : public SrsFileWriter
 {
 public:
     char* data;
+    int size;
     int offset;
+    srs_error_t err;
+    // Error if exceed this offset.
+    int error_offset;
+    // Whether opened.
+    bool opened;
 public:
     MockSrsFileWriter();
     virtual ~MockSrsFileWriter();
 public:
-    virtual int open(std::string file);
+    virtual srs_error_t open(std::string file);
     virtual void close();
 public:
     virtual bool is_open();
+    virtual void seek2(int64_t offset);
     virtual int64_t tellg();
 public:
-    virtual int write(void* buf, size_t count, ssize_t* pnwrite);
+    virtual srs_error_t write(void* buf, size_t count, ssize_t* pnwrite);
+    virtual srs_error_t lseek(off_t offset, int whence, off_t* seeked);
 // for mock
 public:
     void mock_reset_offset();
@@ -71,25 +81,52 @@ public:
     char* data;
     int size;
     int offset;
+    bool opened;
+    // Could seek.
+    bool seekable;
 public:
     MockSrsFileReader();
+    MockSrsFileReader(const char* data, int nb_data);
     virtual ~MockSrsFileReader();
 public:
-    virtual int open(std::string file);
+    virtual srs_error_t open(std::string file);
     virtual void close();
 public:
     virtual bool is_open();
     virtual int64_t tellg();
     virtual void skip(int64_t size);
-    virtual int64_t lseek(int64_t offset);
+    virtual int64_t seek2(int64_t offset);
     virtual int64_t filesize();
 public:
-    virtual int read(void* buf, size_t count, ssize_t* pnread);
+    virtual srs_error_t read(void* buf, size_t count, ssize_t* pnread);
+    virtual srs_error_t lseek(off_t offset, int whence, off_t* seeked);
 // for mock
 public:
     // append data to current offset, modify the offset and size.
     void mock_append_data(const char* _data, int _size);
     void mock_reset_offset();
+};
+
+class MockSrsCodec : public ISrsCodec
+{
+public:
+    MockSrsCodec();
+    virtual ~MockSrsCodec();
+public:
+    virtual int nb_bytes();
+    virtual srs_error_t encode(SrsBuffer* buf);
+    virtual srs_error_t decode(SrsBuffer* buf);
+};
+
+class MockTsHandler : public ISrsTsHandler
+{
+public:
+    SrsTsMessage* msg;
+public:
+    MockTsHandler();
+    virtual ~MockTsHandler();
+public:
+    virtual srs_error_t on_ts_message(SrsTsMessage* m);
 };
 
 #endif

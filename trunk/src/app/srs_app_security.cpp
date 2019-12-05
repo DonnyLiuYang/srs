@@ -1,25 +1,25 @@
-/*
-The MIT License (MIT)
-
-Copyright (c) 2013-2015 SRS(ossrs)
-
-Permission is hereby granted, free of charge, to any person obtaining a copy of
-this software and associated documentation files (the "Software"), to deal in
-the Software without restriction, including without limitation the rights to
-use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
-the Software, and to permit persons to whom the Software is furnished to do so,
-subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
-FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
-COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
-IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
-CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-*/
+/**
+ * The MIT License (MIT)
+ *
+ * Copyright (c) 2013-2019 Winlin
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to
+ * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+ * the Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+ * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+ * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
 
 #include <srs_app_security.hpp>
 
@@ -36,35 +36,36 @@ SrsSecurity::~SrsSecurity()
 {
 }
 
-int SrsSecurity::check(SrsRtmpConnType type, string ip, SrsRequest* req)
+srs_error_t SrsSecurity::check(SrsRtmpConnType type, string ip, SrsRequest* req)
 {
-    int ret = ERROR_SUCCESS;
+    srs_error_t err = srs_success;
     
     // allow all if security disabled.
     if (!_srs_config->get_security_enabled(req->vhost)) {
-        return ret;
+        return err;
     }
     
     // default to deny all when security enabled.
-    ret = ERROR_SYSTEM_SECURITY;
+    err = srs_error_new(ERROR_SYSTEM_SECURITY, "allowed");
     
     // rules to apply
     SrsConfDirective* rules = _srs_config->get_security_rules(req->vhost);
     if (!rules) {
-        return ret;
+        return err;
     }
     
     // allow if matches allow strategy.
     if (allow_check(rules, type, ip) == ERROR_SYSTEM_SECURITY_ALLOW) {
-        ret = ERROR_SUCCESS;
+        srs_error_reset(err);
     }
     
     // deny if matches deny strategy.
     if (deny_check(rules, type, ip) == ERROR_SYSTEM_SECURITY_DENY) {
-        ret = ERROR_SYSTEM_SECURITY_DENY;
+        srs_error_reset(err);
+        return srs_error_new(ERROR_SYSTEM_SECURITY_DENY, "denied");
     }
     
-    return ret;
+    return err;
 }
 
 int SrsSecurity::allow_check(SrsConfDirective* rules, SrsRtmpConnType type, std::string ip)
@@ -77,7 +78,7 @@ int SrsSecurity::allow_check(SrsConfDirective* rules, SrsRtmpConnType type, std:
         if (rule->name != "allow") {
             continue;
         }
-
+        
         switch (type) {
             case SrsRtmpConnPlay:
                 if (rule->arg0() != "play") {
@@ -123,7 +124,7 @@ int SrsSecurity::deny_check(SrsConfDirective* rules, SrsRtmpConnType type, std::
         if (rule->name != "deny") {
             continue;
         }
-
+        
         switch (type) {
             case SrsRtmpConnPlay:
                 if (rule->arg0() != "play") {
